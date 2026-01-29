@@ -14,6 +14,24 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
+  
+   <!-- Core ROS messages -->
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <!-- TF2 -->
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+
+  <!-- Image + CV -->
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+
+  <!-- Message filters -->
+  <depend>message_filters</depend>
+
+  <!-- TurtleBot 4 Navigation -->
+  <depend>turtlebot4_navigation</depend>
 
   <export>
     <build_type>ament_python</build_type>
