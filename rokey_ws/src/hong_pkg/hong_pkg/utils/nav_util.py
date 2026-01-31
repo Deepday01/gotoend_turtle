@@ -54,6 +54,9 @@ class NavProcessor():
         self.navigator.info(f"제자리 돌기{angle_rad}")
         self.navigator.spin(spin_dist=angle_rad, time_allowance=10)
 
+    def stop(self):
+        self.navigator.info("action stop")
+        self.navigator.cancelTask()
 
     def dock(self):
         if not self.navigator.getDockedStatus():

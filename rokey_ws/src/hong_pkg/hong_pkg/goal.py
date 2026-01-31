@@ -15,6 +15,7 @@ from cv_bridge import CvBridge
 import numpy as np
 import cv2
 import threading
+import time
 
 from .utils.nav_util import NavProcessor
 from .utils.depth_util import DepthProcessor
@@ -53,6 +54,7 @@ class DepthToMap(Node):
         self.rgb_image = None
         self.camera_frame = None
         self.clicked_point = None
+        self.is_searching = False
         
         self.robot_x = 0.0
         self.robot_y = 0.0
@@ -142,30 +144,39 @@ class DepthToMap(Node):
             frame_id = self.camera_frame
 
         rgb_detected, detections = self.yolo.detect_tracking_box(rgb)
-        if detections:
-            if click is not None and frame_id:
-                target_pos = []
-                for data in detections:
-                    target_pos.append(data['box_pos'])
-                self.get_logger().info(f"detect : {target_pos}")
-                x, y = click
-                    
-                pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, x, y, frame_id)
 
-                if pt_map:
-                    P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.6)
-                    self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
-                    self.nav.go_to_pose(P_goal[0], P_goal[1], 0.0)
-                    with self.lock:
-                        self.clicked_point = None
-                else:
-                    self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
+        if not detections:
+            if not self.is_searching:
+                self.get_logger().info("no target")
+                self.nav.spin(30)
+                self.is_searching = True
         else:
-            self.nav.spin(30)
+            if self.is_searching:
+                self.get_logger().info("find target stop spin")
+                self.nav.stop()
+                self.is_searching = False
+
+        if click is not None and frame_id:
+            target_pos = []
+            for data in detections:
+                target_pos.append(data['box_pos'])
+            self.get_logger().info(f"detect : {target_pos}")
+            x, y = click
+                    
+            pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, x, y, frame_id)
+
+            if pt_map:
+                P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.6)
+                self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
+                self.nav.go_to_pose(P_goal[0], P_goal[1], 0.0)
+                with self.lock:
+                    self.clicked_point = None
+            else:
+                self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
 
         with self.lock:
-            self.display_image = rgb_detected 
-
+            self.display_image = rgb_detected
+    
     def gui_loop(self):
         window_name = "Robot Control View (RGB)"
         
@@ -178,7 +189,7 @@ class DepthToMap(Node):
                 if self.display_image is not None:
                     img = self.display_image.copy()
             if img is not None:
-                self.cv.show_single(window_name, img, 640, 480)
+                self.cv.show_single(window_name, img, 704, 704)
                 key = cv2.waitKey(1)
                 if key == ord('q'):
                     self.gui_thread_stop.set()
