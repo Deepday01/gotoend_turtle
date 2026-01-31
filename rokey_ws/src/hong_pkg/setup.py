@@ -30,7 +30,8 @@ setup(
 	'nav_through_poses = hong_pkg.nav_through_poses:main',
 	'follow_waypoints = hong_pkg.follow_waypoints:main',
 	'depth_goal = hong_pkg.depth_goal:main',
-	'test = hong_pkg.node_test:main'
+	'test = hong_pkg.node_test:main',
+	'main = hong_pkg.main:main'
         ],
     },
 )
