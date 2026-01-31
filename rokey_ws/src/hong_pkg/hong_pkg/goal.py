@@ -145,7 +145,15 @@ class DepthToMap(Node):
 
         rgb_detected, detections = self.yolo.detect_tracking_box(rgb)
 
-        if not detections:
+        is_found_frame = False
+
+        for data in detections:
+            if data['conf'] >= 0.7:
+                print("test")
+                is_found_frame = True
+                break
+        
+        if not is_found_frame:
             if not self.is_searching:
                 self.get_logger().info("no target")
                 self.nav.spin(30)
