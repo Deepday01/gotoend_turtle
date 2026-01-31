@@ -55,4 +55,14 @@ class YOLOProcessor():
             cv2.putText(img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             
         return img, detections
+    
+    def is_bounding_box(self, detections, x, y):
+        for data in detections:
+            x1, x2, y1, y2 = data['box_pos']
+            if x1 <= x and x2 >= x and y1 <= y and y2 >= y:
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+                result = (center_x, center_y)
+                return True, result
+        return False, None
 

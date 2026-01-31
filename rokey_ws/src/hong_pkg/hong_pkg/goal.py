@@ -146,37 +146,34 @@ class DepthToMap(Node):
         rgb_detected, detections = self.yolo.detect_tracking_box(rgb)
 
         if click is not None and frame_id:
-            target_pos = []
-            for data in detections:
-                target_pos.append(data['box_pos'])
-            self.get_logger().info(f"detect : {target_pos}")
             x, y = click
+            click_check, data = self.yolo.is_bounding_box(detections, x, y)
+            if click_check and data is not None:
+                cx, cy = data
+                pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, cx, cy, frame_id)
+
+                if pt_map:
+                    P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.3)
+                    self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
+                    goal_pose = PoseStamped()
+                    goal_pose.header.frame_id = 'map'
+                    goal_pose.header.stamp = self.get_clock().now().to_msg()
+                    goal_pose.pose.position.x = P_goal[0]
+                    goal_pose.pose.position.y = P_goal[1]
+                    goal_pose.pose.position.z = 0.0
+                    yaw = float(self.robot_yaw)
+                    qz = math.sin(yaw / 2.0)
+                    qw = math.cos(yaw / 2.0)
+                    goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+
+                    self.nav.go_to_pose2(goal_pose)
                     
-            pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, x, y, frame_id)
-
-            if pt_map:
-                P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.3)
-                self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
-                goal_pose = PoseStamped()
-                goal_pose.header.frame_id = 'map'
-                goal_pose.header.stamp = self.get_clock().now().to_msg()
-                goal_pose.pose.position.x = P_goal[0]
-                goal_pose.pose.position.y = P_goal[1]
-                goal_pose.pose.position.z = 0.0
-                yaw = float(self.robot_yaw)
-                qz = math.sin(yaw / 2.0)
-                qw = math.cos(yaw / 2.0)
-                goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
-
-                self.nav.go_to_pose2(goal_pose)
-                
-                #self.nav.go_to_pose(P_goal[0], P_goal[1], self.robot_yaw)
-                with self.lock:
-                    self.clicked_point = None
-            else:
-                self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
+                else:
+                    self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
 
         with self.lock:
+            if click is not None:
+                self.clicked_point = None
             self.display_image = rgb_detected
     
     def gui_loop(self):
