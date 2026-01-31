@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 class MathProcessor():
     def __init__(self):

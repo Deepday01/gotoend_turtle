@@ -21,6 +21,9 @@ class NavProcessor():
         
         goal_pose = self.navigator.getPoseStamped([goal_x, goal_y], goal_or)
         self.navigator.startToPose(goal_pose)
+
+    def go_to_pose2(self, goal_pose):
+        self.navigator.goToPose(goal_pose)
     
     def go_to_through(self, goal_array, goal_or, start_x=None, start_y=None, start_or=None):
         if start_x is not None and start_y is not None:

@@ -16,6 +16,7 @@ import numpy as np
 import cv2
 import threading
 import time
+import math
 
 from .utils.nav_util import NavProcessor
 from .utils.depth_util import DepthProcessor
@@ -54,7 +55,6 @@ class DepthToMap(Node):
         self.rgb_image = None
         self.camera_frame = None
         self.clicked_point = None
-        self.is_searching = False
         
         self.robot_x = 0.0
         self.robot_y = 0.0
@@ -145,25 +145,6 @@ class DepthToMap(Node):
 
         rgb_detected, detections = self.yolo.detect_tracking_box(rgb)
 
-        is_found_frame = False
-
-        for data in detections:
-            if data['conf'] >= 0.7:
-                print("test")
-                is_found_frame = True
-                break
-        
-        if not is_found_frame:
-            if not self.is_searching:
-                self.get_logger().info("no target")
-                self.nav.spin(30)
-                self.is_searching = True
-        else:
-            if self.is_searching:
-                self.get_logger().info("find target stop spin")
-                self.nav.stop()
-                self.is_searching = False
-
         if click is not None and frame_id:
             target_pos = []
             for data in detections:
@@ -174,9 +155,22 @@ class DepthToMap(Node):
             pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, x, y, frame_id)
 
             if pt_map:
-                P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.6)
+                P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.3)
                 self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
-                self.nav.go_to_pose(P_goal[0], P_goal[1], 0.0)
+                goal_pose = PoseStamped()
+                goal_pose.header.frame_id = 'map'
+                goal_pose.header.stamp = self.get_clock().now().to_msg()
+                goal_pose.pose.position.x = P_goal[0]
+                goal_pose.pose.position.y = P_goal[1]
+                goal_pose.pose.position.z = 0.0
+                yaw = float(self.robot_yaw)
+                qz = math.sin(yaw / 2.0)
+                qw = math.cos(yaw / 2.0)
+                goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+
+                self.nav.go_to_pose2(goal_pose)
+                
+                #self.nav.go_to_pose(P_goal[0], P_goal[1], self.robot_yaw)
                 with self.lock:
                     self.clicked_point = None
             else:
