@@ -1,11 +1,14 @@
 from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Directions, TurtleBot4Navigator
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Quaternion
 import math
+import time
 
 class NavProcessor():
     def __init__(self):
         self.navigator = TurtleBot4Navigator()
         self.navigator.waitUntilNav2Active()
+
+        self.last_detection_time = 0
 
     def nav_setup(self, start_x, start_y, start_or):
         initial_pose = self.navigator.getPoseStamped([start_x, start_y], start_or)
@@ -67,6 +70,36 @@ class NavProcessor():
         angle_rad = math.radians(angle_deg)
         self.navigator.info(f"제자리 돌기{angle_rad}")
         self.navigator.spin(spin_dist=angle_rad, time_allowance=10)
+    
+    def search_spin_time(self, detections, rotator, undettime, conf_threadhold=0.5):
+        curr_time = time.time()
+
+        is_valid_object = False
+
+        if detections:
+            for data in detections:
+                if data['conf'] >= conf_threadhold:
+                    is_valid_object = True
+                    break
+
+        if is_valid_object:
+            self.last_detection_time = curr_time
+
+            if rotator.is_running:
+                print("rotator stop")
+                rotator.stop()
+            
+            return True
+        
+        time_diff = curr_time - self.last_detection_time
+
+        if time_diff < undettime:
+            return True
+        elif not rotator.is_running:
+                print("rotator start")
+                rotator.rotate_step()
+        
+        return False
 
     def stop(self):
         self.navigator.info("action stop")
