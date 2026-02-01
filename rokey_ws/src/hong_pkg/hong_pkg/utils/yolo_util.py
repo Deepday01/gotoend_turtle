@@ -59,7 +59,7 @@ class YOLOProcessor():
     def is_bounding_box(self, detections, x, y):
         for data in detections:
             x1, x2, y1, y2 = data['box_pos']
-            if x1 <= x and x2 >= x and y1 <= y and y2 >= y:
+            if x1 <= x <= x2 and y1 <= y <= y2:
                 center_x = (x1 + x2) / 2
                 center_y = (y1 + y2) / 2
                 result = (center_x, center_y)

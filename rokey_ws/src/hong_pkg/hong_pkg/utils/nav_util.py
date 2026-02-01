@@ -1,4 +1,5 @@
 from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Directions, TurtleBot4Navigator
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Quaternion
 import math
 
 class NavProcessor():
@@ -22,7 +23,17 @@ class NavProcessor():
         goal_pose = self.navigator.getPoseStamped([goal_x, goal_y], goal_or)
         self.navigator.startToPose(goal_pose)
 
-    def go_to_pose2(self, goal_pose):
+    def go_to_pose_yaw(self, clock, P_goal, target_yaw):
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'map'
+        goal_pose.header.stamp = clock
+        goal_pose.pose.position.x = P_goal[0]
+        goal_pose.pose.position.y = P_goal[1]
+        goal_pose.pose.position.z = 0.0
+        yaw = float(target_yaw)
+        qz = math.sin(yaw / 2.0)
+        qw = math.cos(yaw / 2.0)
+        goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
         self.navigator.goToPose(goal_pose)
     
     def go_to_through(self, goal_array, goal_or, start_x=None, start_y=None, start_or=None):

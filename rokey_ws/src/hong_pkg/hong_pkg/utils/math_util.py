@@ -21,8 +21,22 @@ class MathProcessor():
             return P_robot
         u = v / dist
 
-        P_goal = P_point + u * 0.6
+        P_goal = P_point + u * distance
         return P_goal
+    
+    def get_standoff_goal_yaw(self, robot_x, robot_y, pt_map, distance=0.6):
+        P_robot = np.array([robot_x, robot_y])
+        P_point = np.array([pt_map.point.x, pt_map.point.y])
+
+        v = P_robot - P_point
+        dist = np.linalg.norm(v)
+        if dist == 0: 
+            return P_robot
+        u = v / dist
+
+        P_goal = P_point + u * distance
+        yaw_face = math.atan2(-u[1], -u[0])
+        return P_goal, yaw_face
 
     def quaternion_to_orientation_roll(self, q):
         t0 = +2.0 * (q.w * q.x + q.y * q.z)

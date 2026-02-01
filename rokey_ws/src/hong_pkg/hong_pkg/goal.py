@@ -23,7 +23,7 @@ from .utils.depth_util import DepthProcessor
 from .utils.cv_util import CVProcessor
 from .utils.math_util import MathProcessor 
 from .utils.yolo_util import YOLOProcessor
-from .actions.rotation_manager import RotationManager
+#from .actions.rotation_manager import RotationManager
 
 # AMCL QoS 설정
 qos_amcl = QoSProfile(
@@ -48,7 +48,7 @@ class DepthToMap(Node):
         self.depth_proc = DepthProcessor()
         self.cv = CVProcessor()
         self.math = MathProcessor()
-        model_path = '/home/rokey/Desktop/project/gotoend_turtle/rokey_ws/src/hong_pkg/hong_pkg/best.pt' 
+        model_path = '/home/rokey/Desktop/project/gotoend_turtle/rokey_ws/src/hong_pkg/hong_pkg/my_best.pt' 
         self.yolo = YOLOProcessor(model_path) 
 
         # 변수 초기화
@@ -149,25 +149,25 @@ class DepthToMap(Node):
         if click is not None and frame_id:
             x, y = click
             click_check, data = self.yolo.is_bounding_box(detections, x, y)
+            print(f"cneter : {data}")
             if click_check and data is not None:
                 cx, cy = data
-                pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, cx, cy, frame_id)
+                pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, int(cx), int(cy), frame_id)
 
                 if pt_map:
-                    P_goal = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.3)
+                    P_goal, yaw_face = self.math.get_standoff_goal_yaw(self.robot_x, self.robot_y, pt_map, distance=0.6)
                     self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
-                    goal_pose = PoseStamped()
-                    goal_pose.header.frame_id = 'map'
-                    goal_pose.header.stamp = self.get_clock().now().to_msg()
-                    goal_pose.pose.position.x = P_goal[0]
-                    goal_pose.pose.position.y = P_goal[1]
-                    goal_pose.pose.position.z = 0.0
-                    yaw = float(self.robot_yaw)
-                    qz = math.sin(yaw / 2.0)
-                    qw = math.cos(yaw / 2.0)
-                    goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
-
-                    self.nav.go_to_pose2(goal_pose)
+                    # goal_pose = PoseStamped()
+                    # goal_pose.header.frame_id = 'map'
+                    # goal_pose.header.stamp = self.get_clock().now().to_msg()
+                    # goal_pose.pose.position.x = P_goal[0]
+                    # goal_pose.pose.position.y = P_goal[1]
+                    # goal_pose.pose.position.z = 0.0
+                    # yaw = float(self.robot_yaw)
+                    # qz = math.sin(yaw / 2.0)
+                    # qw = math.cos(yaw / 2.0)
+                    # goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+                    self.nav.go_to_pose_yaw(self.get_clock().now().to_msg(), P_goal, yaw_face)
                     
                 else:
                     self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
