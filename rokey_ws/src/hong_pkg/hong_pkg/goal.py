@@ -41,6 +41,11 @@ class DepthToMap(Node):
         self.lock = threading.Lock()
         
         self.nav = NavProcessor()
+        
+        #추가
+        # self.started = False
+        # self.delay_timer = None
+        # self.main_timer = None
         self.nav.dock() 
         self.nav.nav_setup(0.0, 0.0, 0.0)
         self.nav.undock()
@@ -78,7 +83,7 @@ class DepthToMap(Node):
         self.create_subscription(CameraInfo, self.info_topic, self.camera_info_callback, 1)
         self.create_subscription(Image, self.depth_topic, self.depth_callback, 1)
         self.create_subscription(CompressedImage, self.rgb_topic, self.rgb_callback, 1)
-        self.create_subscription(Bool, self.start_topic, self.start_callback, 1)
+        #self.start_sub = self.create_subscription(Bool, self.start_topic, self.start_callback, 1)
 
         self.gui_thread = threading.Thread(target=self.gui_loop, daemon=True)
         self.gui_thread.start()
@@ -86,12 +91,32 @@ class DepthToMap(Node):
         self.get_logger().info("TF Tree 안정화 중... (5초)")
         self.start_timer = self.create_timer(5.0, self.start_transform)
 
-    def start_callback(self, msg):
-        if msg.data is True:
-            self.get_logger().info("출발 신호 받았습니다.")
-        else :
-            pass
+    # def start_callback(self, msg):
+    #     if (not msg.data) or self.started:
+    #         return
 
+    #     self.started = True
+    #     self.get_logger().info("출발 신호 수신! 5초 후 시작")
+    #     self.delay_timer = self.create_timer(5.0, self.start_after_delay)
+
+    # def start_after_delay(self):
+    #     if self.delay_timer is not None:
+    #         self.delay_timer.cancel()
+    #         self.delay_timer = None
+
+    #     self.nav.dock()
+    #     self.nav.nav_setup(0.0, 0.0, 0.0)
+    #     self.nav.undock()
+
+    #     if self.main_timer is None:
+    #         self.main_timer = self.create_timer(0.1, self.process_loop)
+
+    #     if self.start_sub is not None:
+    #         self.destroy_subscription(self.start_sub)
+    #         self.start_sub = None
+    #         self.get_logger().info("start_topic 구독 해제 완료 (이후 신호 무시)")
+
+            
     def start_transform(self):
         self.get_logger().info("시스템 준비 완료. 메인 루프 시작.")
         self.timer = self.create_timer(0.1, self.process_loop) # 0.1초마다 처리
