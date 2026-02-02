@@ -23,9 +23,8 @@ from .utils.depth_util import DepthProcessor
 from .utils.cv_util import CVProcessor
 from .utils.math_util import MathProcessor 
 from .utils.yolo_util import YOLOProcessor
-#from .actions.rotation_manager import RotationManager
 
-# AMCL QoS 설정
+# AMCL QoS ì„¤ì •
 qos_amcl = QoSProfile(
     history=HistoryPolicy.KEEP_LAST,
     depth=1,
@@ -33,6 +32,7 @@ qos_amcl = QoSProfile(
     durability=DurabilityPolicy.TRANSIENT_LOCAL
 )
 
+# í´ëž˜ìŠ¤ ìƒì„±
 class DepthToMap(Node):
     def __init__(self):
         super().__init__('depth_to_map_node')
@@ -41,11 +41,6 @@ class DepthToMap(Node):
         self.lock = threading.Lock()
         
         self.nav = NavProcessor()
-        
-        #추가
-        # self.started = False
-        # self.delay_timer = None
-        # self.main_timer = None
         self.nav.dock() 
         self.nav.nav_setup(0.0, 0.0, 0.0)
         self.nav.undock()
@@ -53,10 +48,10 @@ class DepthToMap(Node):
         self.depth_proc = DepthProcessor()
         self.cv = CVProcessor()
         self.math = MathProcessor()
-        model_path = '/home/rokey/Desktop/project/gotoend_turtle/rokey_ws/src/hong_pkg/hong_pkg/my_best.pt' 
+        model_path = '/home/rokey/Desktop/project/gotoend_turtle/rokey_ws/src/hong_pkg/hong_pkg/best.pt' 
         self.yolo = YOLOProcessor(model_path) 
 
-        # 변수 초기화
+        # ë³€ìˆ˜ ì´ˆê¸°í™”
         self.depth_image = None
         self.rgb_image = None
         self.camera_frame = None
@@ -88,42 +83,18 @@ class DepthToMap(Node):
         self.gui_thread = threading.Thread(target=self.gui_loop, daemon=True)
         self.gui_thread.start()
 
-        self.get_logger().info("TF Tree 안정화 중... (5초)")
+        self.get_logger().info("TF Tree ì•ˆì •í™” ì¤‘... (5ì´ˆ)")
         self.start_timer = self.create_timer(5.0, self.start_transform)
+
     def start_callback(self, msg):
-        if msg.data is True: 
-            self.get_logger().info("start")
+        if msg.data is True:
+            self.get_logger().info("ì¶œë°œ ì‹ í˜¸ ë°›ì•˜ìŠµë‹ˆë‹¤.")
         else :
             pass
-    # def start_callback(self, msg):
-    #     if (not msg.data) or self.started:
-    #         return
 
-    #     self.started = True
-    #     self.get_logger().info("출발 신호 수신! 5초 후 시작")
-    #     self.delay_timer = self.create_timer(5.0, self.start_after_delay)
-
-    # def start_after_delay(self):
-    #     if self.delay_timer is not None:
-    #         self.delay_timer.cancel()
-    #         self.delay_timer = None
-
-    #     self.nav.dock()
-    #     self.nav.nav_setup(0.0, 0.0, 0.0)
-    #     self.nav.undock()
-
-    #     if self.main_timer is None:
-    #         self.main_timer = self.create_timer(0.1, self.process_loop)
-
-    #     if self.start_sub is not None:
-    #         self.destroy_subscription(self.start_sub)
-    #         self.start_sub = None
-    #         self.get_logger().info("start_topic 구독 해제 완료 (이후 신호 무시)")
-
-            
     def start_transform(self):
-        self.get_logger().info("시스템 준비 완료. 메인 루프 시작.")
-        self.timer = self.create_timer(0.1, self.process_loop) # 0.1초마다 처리
+        self.get_logger().info("ì‹œìŠ¤í…œ ì¤€ë¹„ ì™„ë£Œ. ë©”ì¸ ë£¨í”„ ì‹œìž‘.")
+        self.timer = self.create_timer(0.1, self.process_loop) # 0.1ì´ˆë§ˆë‹¤ ì²˜ë¦¬
         self.start_timer.cancel()
 
     def amcl_callback(self, msg):
@@ -161,49 +132,59 @@ class DepthToMap(Node):
         if event == cv2.EVENT_LBUTTONDOWN:
             with self.lock:
                 self.clicked_point = (x, y)
-                self.get_logger().info(f"👉 Clicked Pixel: ({x}, {y})")
+                self.get_logger().info(f"ðŸ‘‰ Clicked Pixel: ({x}, {y})")
 
     def process_loop(self):
         with self.lock:
             if self.rgb_image is None or self.depth_image is None:
                 return
-
+            
+            # rgb ì´ë¯¸ì§€ ë³µì‚¬
             rgb = self.rgb_image.copy()
+            # ê¹Šì´ ë°°ì—´ ë³µì‚¬
             depth = self.depth_image.copy()
+            # í´ë¦­ í¬ì¸íŠ¸ ì¢Œí‘œ ë³µì‚¬ 
             click = self.clicked_point
+            # ì¹´ë©”ë¼ ì¢Œí‘œê³„ ê°€ì ¸ì˜¤ê¸°
             frame_id = self.camera_frame
 
         rgb_detected, detections = self.yolo.detect_tracking_box(rgb)
 
         if click is not None and frame_id:
+            target_pos = []
+            for data in detections:
+                target_pos.append(data['box_pos'])
+            self.get_logger().info(f"detect : {target_pos}")
             x, y = click
-            click_check, data = self.yolo.is_bounding_box(detections, x, y)
-            print(f"cneter : {data}")
-            if click_check and data is not None:
-                cx, cy = data
-                pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, int(cx), int(cy), frame_id)
-
-                if pt_map:
-                    P_goal, yaw_face = self.math.get_standoff_goal_yaw(self.robot_x, self.robot_y, pt_map, distance=0.6)
-                    self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
-                    # goal_pose = PoseStamped()
-                    # goal_pose.header.frame_id = 'map'
-                    # goal_pose.header.stamp = self.get_clock().now().to_msg()
-                    # goal_pose.pose.position.x = P_goal[0]
-                    # goal_pose.pose.position.y = P_goal[1]
-                    # goal_pose.pose.position.z = 0.0
-                    # yaw = float(self.robot_yaw)
-                    # qz = math.sin(yaw / 2.0)
-                    # qw = math.cos(yaw / 2.0)
-                    # goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
-                    self.nav.go_to_pose_yaw(self.get_clock().now().to_msg(), P_goal, yaw_face)
                     
-                else:
-                    self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
+            pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, x, y, frame_id)
+
+            if pt_map:
+                P_goal, yaw_face = self.math.get_standoff_goal(self.robot_x, self.robot_y, pt_map, distance=0.3)
+                self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
+                ###
+                # goal_pose = PoseStamped()
+                # goal_pose.header.frame_id = 'map'
+                # goal_pose.header.stamp = self.get_clock().now().to_msg()
+                # goal_pose.pose.position.x = P_goal[0]
+                # goal_pose.pose.position.y = P_goal[1]
+                # goal_pose.pose.position.z = 0.0
+                # yaw = float(self.robot_yaw)
+                # qz = math.sin(yaw / 2.0)
+                # qw = math.cos(yaw / 2.0)
+                # goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+                ###
+                clock = self.get_clock().now().to_msg()
+
+                self.nav.go_to_pose2(clock, P_goal, yaw_face)
+                
+                #self.nav.go_to_pose(P_goal[0], P_goal[1], self.robot_yaw)
+                with self.lock:
+                    self.clicked_point = None
+            else:
+                self.get_logger().warn("ìœ íš¨í•˜ì§€ ì•Šì€ ì¢Œí‘œê±°ë‚˜ Depth ë²”ìœ„ ë°–ìž…ë‹ˆë‹¤.")
 
         with self.lock:
-            if click is not None:
-                self.clicked_point = None
             self.display_image = rgb_detected
     
     def gui_loop(self):
