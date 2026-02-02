@@ -29,6 +29,9 @@ setup(
 	'depth = hong_pkg.depth:main',
 	'nav_through_poses = hong_pkg.nav_through_poses:main',
 	'follow_waypoints = hong_pkg.follow_waypoints:main',
+	'depth_goal = hong_pkg.depth_goal:main',
+	'test = hong_pkg.node_test:main',
+	'main = hong_pkg.main:main'
 	'hong_yolo_compact = hong_pkg.hong_yolo_compact:main',
         'hong_yolo_compact2 = hong_pkg.hong_yolo_compact2:main',
         'hong_depth = hong_pkg.hong_depth:main',
