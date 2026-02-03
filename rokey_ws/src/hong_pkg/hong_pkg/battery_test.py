@@ -43,8 +43,8 @@ class Batterytest(Node):
         # 스레드 락 사용
         with self.lock:
             self.battery_percent = batt_msg.percentage
-            # ROS 2 로그 스타일로 출력
-            self.get_logger().info(f'Battery: {self.battery_percent:.2f}%')
+            if self.state == RobotState.START:
+                self.get_logger().info(f'Battery: {self.battery_percent:.2f}%')
 
 def main(args=None):
     rclpy.init(args=args)
