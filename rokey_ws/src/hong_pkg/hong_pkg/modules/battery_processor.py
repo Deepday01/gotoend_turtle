@@ -34,7 +34,7 @@ class BatteryProcessor:
     def move_and_wait(self, x, y, yaw):
         self.nav.go_to_pose(x, y, yaw)
         
-        while not self.nav.isTaskComplete():
+        while not self.nav.navigator.isTaskComplete():
             time.sleep(0.1)
         
         print("✅ 도착 완료 (Action Complete)")

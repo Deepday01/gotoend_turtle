@@ -85,7 +85,7 @@ class Batterytest(Node):
             current_status = self.line_status.copy()
 
         self.battery_proc.pick_up_waiting(
-            1, 
+            0.2, 
             q1, 
             q2, 
             current_status
