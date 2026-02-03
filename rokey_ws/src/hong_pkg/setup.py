@@ -42,6 +42,7 @@ setup(
         'create_data_dirs = hong_pkg.create_data_dirs:main',
         'move_image = hong_pkg.move_image:main',
         'move_labels = hong_pkg.move_labels:main',
+        'battery = hong_pkg.battery_test:main'
         ],
     },
 )
