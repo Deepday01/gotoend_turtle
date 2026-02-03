@@ -35,7 +35,13 @@ setup(
 	'hong_yolo_compact = hong_pkg.hong_yolo_compact:main',
         'hong_yolo_compact2 = hong_pkg.hong_yolo_compact2:main',
         'hong_depth = hong_pkg.hong_depth:main',
-        '3_3_c_depth_to_nav_goal = hong_pkg.3_3_c_depth_to_nav_goal:main'
+        '3_3_c_depth_to_nav_goal = hong_pkg.3_3_c_depth_to_nav_goal:main',
+        'goal = hong_pkg.goal:main',
+        'depth_to_nav_goal = hong_pkg.depth_to_nav_goal:main',
+        'capture_image = hong_pkg.capture_image:main',
+        'create_data_dirs = hong_pkg.create_data_dirs:main',
+        'move_image = hong_pkg.move_image:main',
+        'move_labels = hong_pkg.move_labels:main',
         ],
     },
 )

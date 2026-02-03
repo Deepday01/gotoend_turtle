@@ -23,17 +23,7 @@ from .utils.depth_util import DepthProcessor
 from .utils.cv_util import CVProcessor
 from .utils.math_util import MathProcessor 
 from .utils.yolo_util import YOLOProcessor
-from .actions.rotation_manager import RotationManager
-
-from enum import Enum, auto
-
-class RobotState(Enum):
-    START = auto()
-    ROBOT_READY = auto()
-    SEARCHING = auto()
-    WAITING_USER = auto()
-    APPROACHING = auto()
-    DONE = auto()
+#from .actions.rotation_manager import RotationManager
 
 # AMCL QoS 설정
 qos_amcl = QoSProfile(
@@ -51,15 +41,22 @@ class DepthToMap(Node):
         self.lock = threading.Lock()
         
         self.nav = NavProcessor()
+        
+        #추가
+        # self.started = False
+        # self.delay_timer = None
+        # self.main_timer = None
+        self.nav.dock() 
+        self.nav.nav_setup(0.0, 0.0, 0.0)
+        self.nav.undock()
+
         self.depth_proc = DepthProcessor()
         self.cv = CVProcessor()
         self.math = MathProcessor()
-        model_path = '/home/rokey/Desktop/project/gotoend_turtle/rokey_ws/src/hong_pkg/hong_pkg/my_best.pt' 
-        self.yolo = YOLOProcessor(model_path)
-        self.rotator = RotationManager(self)
+        model_path = '/home/rokey/gotoend_ws2/rokey_ws/src/hong_pkg/hong_pkg/my_best.pt' 
+        self.yolo = YOLOProcessor(model_path) 
 
         # 변수 초기화
-        self.state = RobotState.START
         self.depth_image = None
         self.rgb_image = None
         self.camera_frame = None
@@ -77,7 +74,6 @@ class DepthToMap(Node):
         self.rgb_topic = f'{ns}/oakd/rgb/image_raw/compressed'
         self.info_topic = f'{ns}/oakd/rgb/camera_info'
         self.amcl_pose = '/robot4/amcl_pose'
-        self.start_topic = '/start_topic'
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -86,7 +82,6 @@ class DepthToMap(Node):
         self.create_subscription(CameraInfo, self.info_topic, self.camera_info_callback, 1)
         self.create_subscription(Image, self.depth_topic, self.depth_callback, 1)
         self.create_subscription(CompressedImage, self.rgb_topic, self.rgb_callback, 1)
-        self.create_subscription(Bool, self.start_topic, self.start_callback, 1)
 
         self.gui_thread = threading.Thread(target=self.gui_loop, daemon=True)
         self.gui_thread.start()
@@ -94,13 +89,32 @@ class DepthToMap(Node):
         self.get_logger().info("TF Tree 안정화 중... (5초)")
         self.start_timer = self.create_timer(5.0, self.start_transform)
 
-    def start_callback(self, msg):
-        if msg.data is True and self.state == RobotState.START:
-            self.get_logger().info("출발 신호 받았습니다.")
-            self.state = RobotState.ROBOT_READY
-        else :
-            pass
+    # def start_callback(self, msg):
+    #     if (not msg.data) or self.started:
+    #         return
 
+    #     self.started = True
+    #     self.get_logger().info("출발 신호 수신! 5초 후 시작")
+    #     self.delay_timer = self.create_timer(5.0, self.start_after_delay)
+
+    # def start_after_delay(self):
+    #     if self.delay_timer is not None:
+    #         self.delay_timer.cancel()
+    #         self.delay_timer = None
+
+    #     self.nav.dock()
+    #     self.nav.nav_setup(0.0, 0.0, 0.0)
+    #     self.nav.undock()
+
+    #     if self.main_timer is None:
+    #         self.main_timer = self.create_timer(0.1, self.process_loop)
+
+    #     if self.start_sub is not None:
+    #         self.destroy_subscription(self.start_sub)
+    #         self.start_sub = None
+    #         self.get_logger().info("start_topic 구독 해제 완료 (이후 신호 무시)")
+
+            
     def start_transform(self):
         self.get_logger().info("시스템 준비 완료. 메인 루프 시작.")
         self.timer = self.create_timer(0.1, self.process_loop) # 0.1초마다 처리
@@ -155,46 +169,31 @@ class DepthToMap(Node):
 
         rgb_detected, detections = self.yolo.detect_tracking_box(rgb)
 
-        if self.state == RobotState.ROBOT_READY:
-            self.nav.dock() 
-            self.nav.nav_setup(0.0, 0.0, 0.0)
-            self.nav.undock()
-            self.state = RobotState.SEARCHING
+        if click is not None and frame_id:
+            x, y = click
+            click_check, data = self.yolo.is_bounding_box(detections, x, y)
+            print(f"cneter : {data}")
+            if click_check and data is not None:
+                cx, cy = data
+                pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, int(cx), int(cy), frame_id)
 
-        elif self.state == RobotState.SEARCHING:
-            is_found = self.nav.search_spin_time(detections, self.rotator, 2.0)
-            if is_found:
-                self.state = RobotState.WAITING_USER
-
-        elif self.state == RobotState.WAITING_USER:
-            is_still = self.nav.search_spin_time(detections, self.rotator, 2.0)
-
-            if not is_still:
-                 self.state = RobotState.SEARCHING
-
-            elif click is not None:
-                x, y = click
-                click_check, data = self.yolo.is_bounding_box(detections, x, y)
-
-                if click_check and data is not None:
-                    cx, cy = data
-                    pt_map = self.depth_proc.get_xy_transform(self.tf_buffer, depth, int(cx), int(cy), frame_id)
-
-                    if pt_map:
-                        P_goal, yaw_face = self.math.get_standoff_goal_yaw(self.robot_x, self.robot_y, pt_map, distance=0.6)
-                        self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
-                        self.nav.go_to_pose_yaw(self.get_clock().now().to_msg(), P_goal, yaw_face)
-                        self.state = RobotState.APPROACHING
-                    else:
-                        self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
-
-        elif self.state == RobotState.APPROACHING:
-            if self.nav.navigator.isTaskComplete():
-                self.state = RobotState.DONE
-
-        elif self.state == RobotState.DONE:
-            time.sleep(2.0)
-            self.state = RobotState.SEARCHING
+                if pt_map:
+                    P_goal, yaw_face = self.math.get_standoff_goal_yaw(self.robot_x, self.robot_y, pt_map, distance=0.6)
+                    self.get_logger().info(f"Goal Set: ({P_goal[0]:.2f}, {P_goal[1]:.2f})")
+                    # goal_pose = PoseStamped()
+                    # goal_pose.header.frame_id = 'map'
+                    # goal_pose.header.stamp = self.get_clock().now().to_msg()
+                    # goal_pose.pose.position.x = P_goal[0]
+                    # goal_pose.pose.position.y = P_goal[1]
+                    # goal_pose.pose.position.z = 0.0
+                    # yaw = float(self.robot_yaw)
+                    # qz = math.sin(yaw / 2.0)
+                    # qw = math.cos(yaw / 2.0)
+                    # goal_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+                    self.nav.go_to_pose_yaw(self.get_clock().now().to_msg(), P_goal, yaw_face)
+                    
+                else:
+                    self.get_logger().warn("유효하지 않은 좌표거나 Depth 범위 밖입니다.")
 
         with self.lock:
             if click is not None:
