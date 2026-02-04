@@ -3,6 +3,8 @@ import time
 
 class MainProcessor:
     def __init__(self, my_robot_id):
+        
+        self.robot_id = my_robot_id
 
         # 로봇 아이디별로 라인 배정
         if my_robot_id == 4:
@@ -19,29 +21,37 @@ class MainProcessor:
         # 배터리가 30프로 미만일때 도킹하러감
         if battery < 30:
             print('Low Battery! Go to Dock')
-            self.move_and_wait(-11.97, 0.72, 0.0)
-            return
-        # 자신의 라인의 박스 갯수가 있으면 우선적으로 처리
+            if self.robot_id == 4:
+                goal = [[-1.59, -0.47]]
+                self.move_and_wait(goal, 0.0)
+            else:
+                goal = [[-1.53, 0.85]]
+                self.move_and_wait(goal, 0.0)
+
         elif my_queue_count > 0:
             if line_status.get(self.my_line_id) == True:
                 print(f"내 라인({self.my_line_id}) 작업 대기 중 (Occupied)...")
                 return
-
-            self.move_and_wait(-12.14, -0.37, 0.0)
+            
             print(f'내 라인({self.my_line_id}) 작업 시작')
-        # 자신의 라인에 박스가 없으면 상대 라인 박스 협동
+
         elif other_queue_count > 0:
             if line_status.get(self.other_line_id) == True:
                 print(f"{self.other_line_id}번 지원 대기 중 (Occupied)...")
                 return
-
-            self.move_and_wait(-12.21, -0.37, 0.0)
+            if self.robot_id == 4:
+                goal = [[-2.90, -1.67]]
+                self.move_and_wait(goal, 0.0)
+            else :
+                goal = [[-1.58, -1.45]]
+                self.move_and_wait(goal, 0.0)
+            
             print(f"{self.other_line_id}번 라인 지원 출발")
         else:
             pass
     # x 좌표, y 좌표, 로봇이 바라보는 방향
-    def move_and_wait(self, x, y, yaw):
-        self.nav.go_to_pose(x, y, yaw)
+    def move_and_wait(self, goal_array, yaw):
+        self.nav.go_to_follow(goal_array = goal_array, goal_or = yaw)
         # waitting
         while not self.nav.navigator.isTaskComplete():
             time.sleep(0.1)

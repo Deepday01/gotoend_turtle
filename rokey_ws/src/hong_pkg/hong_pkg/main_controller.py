@@ -8,6 +8,7 @@ from nav2_simple_commander.robot_navigator import TaskResult
 
 from threading import Lock
 from enum import Enum, auto
+import time
 
 # 모듈 import
 from .modules.main_processor import MainProcessor
@@ -21,6 +22,7 @@ class RobotState(Enum):
     LOADING = auto()         # 5초 기다리기 (박스 받는 중)
     MOVE_TO_DEST = auto()    # 목적지로 배달
     RETURN_TO_LINE = auto()  # 라인으로 복귀 (다음 작업 대기)
+    STOP = auto()
 
 class MainController(Node):
     def __init__(self):
@@ -33,7 +35,7 @@ class MainController(Node):
         self.state = RobotState.CHARGING
         
         # 라인별 상자 갯수
-        self.line1_count = 2
+        self.line1_count = 0
         self.line2_count = 0
         
         # 라인별 작업 상태
@@ -115,15 +117,18 @@ class MainController(Node):
         if self.state == RobotState.CHARGING:
             if self.line1_count > 0 and self.my_robot_id == 4:
                 self.nav.undock()
-                while not self.nav.navigator.isTaskComplete():
-                    time.sleep(0.1)
+                if self.nav.navigator.isTaskComplete():
+                    self.state = RobotState.STOP
+
                 self.state = RobotState.MOVE_TO_PICKUP
             
             if self.line2_count > 0 and self.my_robot_id == 5:
                 self.nav.undock()
-                while not self.nav.navigator.isTaskComplete():
-                    time.sleep(0.1)
+                if self.nav.navigator.isTaskComplete():
+                    self.state = RobotState.STOP
+
                 self.state = RobotState.MOVE_TO_PICKUP
+
         elif self.state == RobotState.MOVE_TO_PICKUP:
             goal = [[-1.59,-0.47], [-1.58, -1.45]]
             self.follow_move_and_wait(goal, 0.0)
@@ -143,19 +148,22 @@ class MainController(Node):
                 current_status
             )
             self.state = RobotState.LOADING
+
         elif self.state == RobotState.LOADING:
             time.sleep(5)
             self.state = RobotState.MOVE_TO_DEST
+
         elif self.state == RobotState.MOVE_TO_DEST:
+            pass
+        elif self.state == RobotState.STOP:
             pass
 
     def follow_move_and_wait(self, goal_array, yaw):
         self.nav.go_to_follow(goal_array = goal_array, goal_or = yaw)
         # waitting
-        while not self.nav.navigator.isTaskComplete():
-            time.sleep(0.1)
-
-        print("도착 완료 (Action Complete)")
+        if self.nav.navigator.isTaskComplete():
+            self.state = RobotState.STOP
+            
 
 def main(args=None):
     rclpy.init(args=args)
