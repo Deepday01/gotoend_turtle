@@ -2,14 +2,18 @@ from ..utils.nav_util import NavProcessor
 import time
 
 class BatteryProcessor:
-    def __init__(self, my_line_id):
-        self.my_line_id = my_line_id
-        self.nav = NavProcessor()
-        if my_line_id == 4:
-            other_line_id = 5
-        else:
-            other_line_id = 4
+    def __init__(self, my_robot_id):
 
+        # 로봇 아이디별로 라인 배정
+        if my_robot_id == 4:
+            self.my_line_id = 1
+            self.other_line_id = 2
+        else :
+            self.my_line_id = 2
+            self.other_line_id = 1
+        self.nav = NavProcessor()
+
+    # 배리 상태, 자신의 라인 박스 갯수, 다른 라인 박스 갯수, 각 라인 작업 상태
     def pick_up_waiting(self, battery_percent, my_queue_count, other_queue_count, line_status):
         battery = battery_percent * 100
         # 배터리가 30프로 미만일때 도킹하러감
@@ -35,10 +39,10 @@ class BatteryProcessor:
             self.move_and_wait(-0.56, -0.04, 0.0)
         else:
             pass
-
+    # x 좌표, y 좌표, 로봇이 바라보는 방향
     def move_and_wait(self, x, y, yaw):
         self.nav.go_to_pose(x, y, yaw)
         
         while not self.nav.navigator.isTaskComplete():
             time.sleep(0.1)
-        print("✅ 도착 완료 (Action Complete)")
+        print("도착 완료 (Action Complete)")

@@ -51,8 +51,16 @@ class Batterytest(Node):
         # 라인1 박스 총 갯수
         self.line1_total_subscriber = self.create_subscription(
             Int32,
-            '/qr/count_total',
+            '/line1/count_total',
             self.line1_total_callback,
+            1
+        )
+
+        # 라인2 박스 총 갯수
+        self.line2_total_subscriber = self.create_subscription(
+            Int32,
+            '/line2/count_total',
+            self.line2_total_callback,
             1
         )
 
@@ -69,21 +77,30 @@ class Batterytest(Node):
     # 데이터가 비어 있지 않르면 라인 상태 저장
     def line_status_callback(self, msg):
         with self.lock:
+            # [0,0,0], [0,1,0], [0,0,1], [0,1,1]
             if len(msg.data) >= 3:
                 self.line_status[1] = bool(msg.data[1])
                 self.line_status[2] = bool(msg.data[2])
 
+    # 라인1의 박스 총 갯수
     def line1_total_callback(self, msg):
         with self.lock:
             self.line1_count = msg.data
             self.get_logger().info(f'data: {self.line1_count}')
+    
+    # 라인2의 박스 총 갯수
+    def line2_total_callback(self, msg):
+        with self.lock:
+            self.line2_count = msg.data
+            self.get_logger().info(f'data: {self.line2_count}')
 
+    # 배터리 상태 float 값으로 받아옴
     def battery_state_callback(self, batt_msg: BatteryState):
         with self.lock:
             self.battery_percent = batt_msg.percentage
             self.get_logger().info(f'Battery: {self.battery_percent:.2f}%')
-            self.state = RobotState.ROBOT_READY
 
+    # 메인 루프
     def main_controller(self):
         with self.lock:
             current_battery = self.battery_percent
