@@ -25,12 +25,13 @@ class Batterytest(Node):
 
         self.lock = Lock()
 
-        self.state = RobotState.START
         self.battery_percent = 0.0
+
+        self.state = RobotState.CHARGING
         
         # 라인별 상자 갯수
-        self.line1_count = 0 
-        self.line2_count = 0
+        self.line1_count = 3
+        self.line2_count = 2
         
         # 라인별 작업 상태
         self.line_status = {1: False, 2: False} 
