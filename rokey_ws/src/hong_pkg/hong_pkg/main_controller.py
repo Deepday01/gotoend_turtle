@@ -278,17 +278,19 @@ class MainController(Node):
             self.state = RobotState.LOADING
 
         elif self.state == RobotState.LOADING:
-            if self.start:
-                self.state = RobotState.MOVE_TO_DEST
-            else:
-                self.state = RobotState.LOADING
-                self.get_logger().info(f'작업 대기중')
-            
-            if self.start2:
-                self.state = RobotState.MOVE_TO_DEST
-            else:
-                self.state = RobotState.LOADING
-                self.get_logger().info(f'작업 대기중')
+            if self.my_robot_id == 4:
+                if self.start:
+                    self.state = RobotState.MOVE_TO_DEST
+                    self.start = False
+                else:
+                    self.state = RobotState.LOADING
+
+            elif self.my_robot_id == 5:
+                if self.start2:
+                    self.state = RobotState.MOVE_TO_DEST
+                    self.start2 = False
+                else:
+                    self.state = RobotState.LOADING
 
         elif self.state == RobotState.MOVE_TO_DEST:
             if self.my_robot_id == 4:
