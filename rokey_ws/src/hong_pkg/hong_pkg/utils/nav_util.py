@@ -167,4 +167,82 @@ class NavProcessor():
             goal_pose.append(self.make_pose(x, y, yaw))
 
         self.navigator.startFollowWaypoints(goal_pose)
-        
+    
+    # waypoint 동작 둘로 나눠서 다음 동작 실행할지 결정
+    import math
+    import time
+    from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Directions
+
+    def way_point_no_ori2(self, goal_array, wait_point, cancel, goal_or=None,
+                        start_x=None, start_y=None, start_or=None, on_reach=None):
+
+        if start_x is not None and start_y is not None:
+            if start_or is None:
+                start_or = TurtleBot4Directions.NORTH
+            self.nav_setup(start_x, start_y, start_or)
+
+        wait_index = goal_array.index(wait_point)
+        goal_array1 = goal_array[:wait_index + 1]
+        goal_array2 = goal_array[wait_index + 1:]   # ✅ 비어있지 않다고 가정
+
+        goal_pose1 = []
+        goal_pose2 = []
+
+        final_yaw = None
+        if goal_or is not None:
+            final_yaw = math.radians(float(goal_or))
+
+        # -------------------------
+        # 1) 첫 구간
+        # -------------------------
+        for i, (x, y) in enumerate(goal_array1):
+            is_last = (i == len(goal_array1) - 1)
+
+            if not is_last:
+                nx, ny = goal_array1[i + 1]
+                yaw = math.atan2(ny - y, nx - x)
+            else:
+                # wait_point에서 2구간 첫 점 방향으로 회전
+                nx, ny = goal_array2[0]
+                yaw = math.atan2(ny - y, nx - x)
+
+            goal_pose1.append(self.make_pose(x, y, yaw))
+
+        self.navigator.startFollowWaypoints(goal_pose1)
+        # waypoint1 끝나면 작업 준비 : working 토픽 발행
+        if on_reach is not None:
+            on_reach()
+        # -------------------------
+        # 2구간 실행 "대기 게이트"
+        # - cancel(True)면 계속 대기
+        # - cancel(False) 되는 순간 break → 2구간 실행
+        # -------------------------
+        def _is_cancel():
+            return cancel() if callable(cancel) else bool(cancel)
+
+        # wait gate
+        while _is_cancel():
+            time.sleep(0.1)
+        # -------------------------
+        # 2) 두번째 구간 (기다리다 실행됨)
+        # -------------------------
+        for i, (x, y) in enumerate(goal_array2):
+            is_last = (i == len(goal_array2) - 1)
+
+            if not is_last:
+                nx, ny = goal_array2[i + 1]
+                yaw = math.atan2(ny - y, nx - x)
+            else:
+                if final_yaw is not None:
+                    yaw = final_yaw
+                else:
+                    # 2구간 마지막: 직전 진행방향 유지(길이>=2 가정해도 되지만 안전하게)
+                    if len(goal_array2) >= 2:
+                        px, py = goal_array2[i - 1]
+                        yaw = math.atan2(y - py, x - px)
+                    else:
+                        yaw = 0.0
+
+            goal_pose2.append(self.make_pose(x, y, yaw))
+
+        self.navigator.startFollowWaypoints(goal_pose2)
