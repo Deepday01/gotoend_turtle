@@ -297,13 +297,19 @@ class MainController(Node):
 
         # 3. 대기
         elif self.state == RobotState.WAITTING:
+            print(f'line 1 : {self.line1_count}')
+            print(f'line 2 : {self.line2_count}')
             with self.lock:
                 q1 = self.line1_count
                 q2 = self.line2_count
                 current_status = self.line_status.copy()
             
             # (참고) pick_up_waiting 내부 로직에 따라 상태 반환
-            self.state = self.battery_proc.pick_up_waiting(self.battery_percent, q1, q2, current_status)
+            if self.my_robot_id == 4:
+                self.state = self.battery_proc.pick_up_waiting(self.battery_percent, q1, q2, current_status)
+            else:
+                self.state = self.battery_proc.pick_up_waiting(self.battery_percent, q2, q1, current_status)
+
             self.state = RobotState.LOADING
 
         # 4. 로딩
