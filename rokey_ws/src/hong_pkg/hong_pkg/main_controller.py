@@ -390,17 +390,22 @@ class MainController(Node):
         self.state = RobotState.STOP
 
     def move_to_goal(self, goal_array, qr_id, wait_point):
-        def pub_work():
-            msg = Int32(); msg.data = int(qr_id)
-            self.work_pub.publish(msg)
-            
-        self.nav.way_point_no_ori2(
-            goal_array=goal_array,
-            goal_or=TurtleBot4Directions.SOUTH,
-            wait_point=wait_point,
-            cancel=lambda: self.cancel_condition,
-            on_reach=pub_work,
-        )
+        if self.my_robot_id == 4:
+            self.nav.way_point_no_ori2(
+                goal_array=goal_array,
+                goal_or=TurtleBot4Directions.SOUTH,
+                wait_point=wait_point,
+                cancel=lambda: self.cancel_condition,
+                on_reach=self.drive.robot4_send_work_finish,
+            )
+        else:
+            self.nav.way_point_no_ori2(
+                goal_array=goal_array,
+                goal_or=TurtleBot4Directions.SOUTH,
+                wait_point=wait_point,
+                cancel=lambda: self.cancel_condition,
+                on_reach=self.drive.robot5_send_work_finish,
+            )
         self.state = RobotState.MOVE_ALIGNING 
 
     def follow_move_and_wait(self, goal_array):
