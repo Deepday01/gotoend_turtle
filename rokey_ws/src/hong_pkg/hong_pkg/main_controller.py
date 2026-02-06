@@ -353,12 +353,12 @@ class MainController(Node):
         elif self.state == RobotState.RETURN_TO_LINE:
             self.get_logger().info("이동 완료 (DOCKING STATE)")
             if self.my_robot_id == 4 :
-                self.get_logger().info("5번 움직여")
-                self.drive.robot5_send_work_finish()
-                self.follow_move_and_wait(self.final_map)
-            else:
                 self.get_logger().info("4번 움직여")
                 self.drive.robot4_send_work_finish()
+                self.follow_move_and_wait(self.final_map)
+            else:
+                self.get_logger().info("5번 움직여")
+                self.drive.robot5_send_work_finish()
                 self.follow_move_and_wait(self.final_map2)
             self.state = RobotState.WAITTING
         elif self.state == RobotState.DOCKING:

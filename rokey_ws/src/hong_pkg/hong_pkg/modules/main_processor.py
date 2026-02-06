@@ -7,13 +7,13 @@ ROBOT_CONFIG = {
         'my_line': 1,
         'other_line': 2,
         'dock_coords': [[-1.59, -0.47]],    # 도킹 대기 장소
-        'support_coords': [[-2.90, -1.67]]  # 2번 라인 지원 장소
+        'support_coords': [[-2.11,-1.55], [-2.87, -1.66]]  # 2번 라인 지원 장소
     },
     'default': {  # 그 외 로봇 (예: 5번) 설정
         'my_line': 2,
         'other_line': 1,
         'dock_coords': [[-1.53, 0.85]],     # 도킹 대기 장소
-        'support_coords': [[-1.58, -1.45]]  # 1번 라인 지원 장소
+        'support_coords': [[-2.11,-1.55], [-1.61, -1.70]]  # 1번 라인 지원 장소
     }
 }
 
