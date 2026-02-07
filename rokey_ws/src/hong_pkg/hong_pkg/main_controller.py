@@ -249,8 +249,6 @@ class MainController(Node):
             self.get_logger().info(f"QR Received: {msg.data}")
 
     def working_callback(self, msg: Int32):
-        self.get_logger("no!!!!!!!!!!!!")
-        self.get_logger(f"rrrrr{self.target_working_topic}")
         val = int(msg.data)
         self.cancel_condition = (val in (1, 2, 3))
 

@@ -209,7 +209,10 @@ class NavProcessor():
             goal_pose1.append(self.make_pose(x, y, yaw))
 
         self.navigator.startFollowWaypoints(goal_pose1)
-        print("111111111111111111111111111111111111111111111")
+
+        while not self.nav.navigator.isTaskComplete():
+            time.sleep(0.1)
+            
         # waypoint1 끝나면 작업 준비 : working 토픽 발행
         if on_reach is not None:
             on_reach()
