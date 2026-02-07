@@ -9,6 +9,7 @@ class RobotState(Enum):
     MOVE_ALIGNING = auto()   # 목적지에 도착하면 정렬
     RETURN_TO_LINE = auto()  # 라인으로 복귀 (다음 작업 대기)
     GO_TO_WAIT = auto()      # 라인 가기전 대기
+    GO_TO_OTHER = auto()
     STOP = auto()
     DOCKING = auto()
     DONE = auto()

@@ -51,6 +51,7 @@ class MainProcessor:
                 print(f"✋ {self.other_line_id}번 라인 지원 대기 중 (Occupied)...")
                 return RobotState.WAITTING
             
+            time.sleep(2.0)
             self.move_and_wait(self.support_coords)
             return RobotState.LOADING
         else:

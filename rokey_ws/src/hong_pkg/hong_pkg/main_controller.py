@@ -52,10 +52,12 @@ class MainController(Node):
 
         if ns == "/robot4":
             self.my_robot_id = 4
+            self.current_working_line = 1
             self.my_working_topic = '/robot4/working'
             self.target_working_topic = '/robot5/working'
         else:
             self.my_robot_id = 5
+            self.current_working_line = 2
             self.my_working_topic = '/robot5/working'
             self.target_working_topic = '/robot4/working'
 
@@ -327,7 +329,8 @@ class MainController(Node):
             else:
                 # 5번 로봇: 내 라인(q2) 우선, 없으면 q1 지원
                 self.state = self.battery_proc.pick_up_waiting(self.battery_percent, q2, q1, current_status)
-
+        elif self.state == RobotState.GO_TO_OTHER:
+            pass
         # 4. 로딩
         elif self.state == RobotState.LOADING:
             if (self.my_robot_id == 4 and self.start) or \
@@ -351,12 +354,13 @@ class MainController(Node):
                 qr_id = self.qr_queue.popleft()
                 
                 if self.my_robot_id == 4:
-                    self.work_pub5.publish(Int32(data=int(qr_id)))
-                    time.sleep(1.0)
+                    self.work_pub4.publish(Int32(data=int(qr_id)))
                     self.get_logger().info(f"Waiting condition4: {self.cancel_condition4}")
+                    rclpy.spin_once(self, timeout_sec=0.5)
                     while self.cancel_condition4:
+                        self.get_logger().info("222222222cancel condition")
                         time.sleep(0.1)
-                    
+                        rclpy.spin_once(self, timeout_sec=0.5)
                     if qr_id in self.goal_map:
                         self.follow_move_and_wait(self.goal_map[qr_id])
                         self.state = RobotState.MOVE_ALIGNING
@@ -364,12 +368,13 @@ class MainController(Node):
                         self.get_logger().error(f"Invalid QR ID: {qr_id}")
 
                 else:
-                    self.work_pub4.publish(Int32(data=int(qr_id)))
-                    time.sleep(1.0)
+                    self.work_pub5.publish(Int32(data=int(qr_id)))
                     self.get_logger().info(f"Waiting condition5: {self.cancel_condition5}")
+                    rclpy.spin_once(self, timeout_sec=0.5)
                     while self.cancel_condition5:
+                        self.get_logger().info("55555555cancel condition")
                         time.sleep(0.1)
-                        
+                        rclpy.spin_once(self, timeout_sec=0.5)
                     if qr_id in self.goal_map2:
                         self.follow_move_and_wait(self.goal_map2[qr_id])
                         self.state = RobotState.MOVE_ALIGNING
