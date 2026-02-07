@@ -352,6 +352,7 @@ class MainController(Node):
                 
                 if self.my_robot_id == 4:
                     self.work_pub5.publish(Int32(data=int(qr_id)))
+                    time.sleep(1.0)
                     self.get_logger().info(f"Waiting condition4: {self.cancel_condition4}")
                     while self.cancel_condition4:
                         time.sleep(0.1)
@@ -364,7 +365,7 @@ class MainController(Node):
 
                 else:
                     self.work_pub4.publish(Int32(data=int(qr_id)))
-                    
+                    time.sleep(1.0)
                     self.get_logger().info(f"Waiting condition5: {self.cancel_condition5}")
                     while self.cancel_condition5:
                         time.sleep(0.1)
