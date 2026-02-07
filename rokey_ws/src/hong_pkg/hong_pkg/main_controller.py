@@ -44,7 +44,8 @@ class MainController(Node):
         self.line_status = {1: False, 2: False}
         self.start = False
         self.start2 = False
-        self.cancel_condition = False
+        self.cancel_condition4 = False
+        self.cancel_condition5 = False
         
         ns = self.get_namespace()
         self.get_logger().info(ns)
@@ -124,7 +125,8 @@ class MainController(Node):
         
         self.qr_id1_sub = self.create_subscription(Int32, '/qr_code_id1', self.qr_callback, qos_profile_sensor_data)
         self.qr_id2_sub = self.create_subscription(Int32, '/qr_code_id2', self.qr2_callback, qos_profile_sensor_data)
-        self.working_sub = self.create_subscription(Int32, self.target_working_topic, self.working_callback, qos_profile_sensor_data)
+        self.working_sub4 = self.create_subscription(Int32, '/robot4/working', self.working_callback4, 10)
+        self.working_sub5 = self.create_subscription(Int32, '/robot5/working', self.working_callback5, 10)
         
         self.battery_state_subscriber = self.create_subscription(BatteryState, '/battery_state', self.battery_state_callback, qos_profile_sensor_data)
         self.line1_total_subscriber = self.create_subscription(Int32, '/line1/count_total', self.line1_total_callback, 1)
@@ -133,7 +135,8 @@ class MainController(Node):
         self.start_subscriber = self.create_subscription(Bool, '/box_placed1', self.start_callback, 1)
         self.start_subscriber2 = self.create_subscription(Bool, '/box_placed2', self.start_callback2, 1)
 
-        self.work_pub = self.create_publisher(Int32, self.my_working_topic, 10)
+        self.work_pub4 = self.create_publisher(Int32, '/robot4/working', 10)
+        self.work_pub5 = self.create_publisher(Int32, '/robot5/working', 10)
 
         self.get_logger().info("MainController & ArUco Logic Ready.")
         self.timer = self.create_timer(0.1, self.main_controller)
@@ -252,11 +255,17 @@ class MainController(Node):
             self.qr_queue.append(int(msg.data))
             self.get_logger().info(f"QR Received: {msg.data}")
 
-    def working_callback(self, msg: Int32):
+    def working_callback4(self, msg: Int32):
         with self.lock:
-            self.get_logger().info("cancel!!!!!!!!!!!!!!!!!!!!!!!")
+            self.get_logger().info("cancel4!!!!!!!!!!!!!!!!!!!!!!!")
             val = int(msg.data)
-            self.cancel_condition = (val in (1, 2, 3))
+            self.cancel_condition4 = (val in (1, 2, 3))
+    
+    def working_callback5(self, msg: Int32):
+        with self.lock:
+            self.get_logger().info("cancel5!!!!!!!!!!!!!!!!!!!!!!!")
+            val = int(msg.data)
+            self.cancel_condition5 = (val in (1, 2, 3))
 
     def start_callback(self, msg):
         with self.lock: self.start = msg.data
@@ -338,16 +347,35 @@ class MainController(Node):
 
         # 기다리기
         elif self.state == RobotState.GO_TO_WAIT:
-            qr_id = self.qr_queue.popleft()
-            self.work_pub.publish(Int32(data=int(qr_id))) # goal position으로 보내야 함
+            if len(self.qr_queue) > 0:
+                qr_id = self.qr_queue.popleft()
+                
+                if self.my_robot_id == 4:
+                    self.work_pub5.publish(Int32(data=int(qr_id)))
+                    self.get_logger().info(f"Waiting condition4: {self.cancel_condition4}")
+                    while self.cancel_condition4:
+                        time.sleep(0.1)
+                    
+                    if qr_id in self.goal_map:
+                        self.follow_move_and_wait(self.goal_map[qr_id])
+                        self.state = RobotState.MOVE_ALIGNING
+                    else:
+                        self.get_logger().error(f"Invalid QR ID: {qr_id}")
 
-            while self.cancel_condition :
-                time.sleep(0.1)
-            if self.my_robot_id == 4:
-                self.follow_move_and_wait(self.goal_map[qr_id])
+                else:
+                    self.work_pub4.publish(Int32(data=int(qr_id)))
+                    
+                    self.get_logger().info(f"Waiting condition5: {self.cancel_condition5}")
+                    while self.cancel_condition5:
+                        time.sleep(0.1)
+                        
+                    if qr_id in self.goal_map2:
+                        self.follow_move_and_wait(self.goal_map2[qr_id])
+                        self.state = RobotState.MOVE_ALIGNING
+                    else:
+                        self.get_logger().error(f"Invalid QR ID: {qr_id}")
             else:
-                self.follow_move_and_wait(self.goal_map2[qr_id])
-            self.state = RobotState.MOVE_ALIGNING
+                pass
 
         # [중요] 7. 마커 정렬 단계
         elif self.state == RobotState.MOVE_ALIGNING:
