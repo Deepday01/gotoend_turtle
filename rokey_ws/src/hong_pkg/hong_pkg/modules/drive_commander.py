@@ -5,7 +5,7 @@ class DriveCommander:
     def __init__(self, node):
         self.node = node
         self.publisher = node.create_publisher(Twist, '/robot4/cmd_vel', 10)
-        self.publisher = node.create_publisher(Int32MultiArray,'/line_status',10)
+        self.status_publisher = node.create_publisher(Int32MultiArray,'/line_status',10)
         self.work_pub = node.create_publisher(Int32, '/robot4/working', 10)
         self.work_pub2 = node.create_publisher(Int32, '/robot5/working', 10)
 

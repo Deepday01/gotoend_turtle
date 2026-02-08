@@ -53,7 +53,7 @@ class MainProcessor:
             
             time.sleep(2.0)
             self.move_and_wait(self.support_coords)
-            return RobotState.LOADING
+            return RobotState.GO_TO_OTHER
         else:
             return RobotState.WAITTING
 
